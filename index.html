@@ -88,7 +88,7 @@
 
   label{ display:block; font-size:13px; font-weight:600; color: var(--ink-soft); margin: 16px 0 6px; }
   label:first-of-type{ margin-top:0; }
-  input[type="text"], input[type="email"], select{
+  input[type="text"], input[type="email"], input[type="tel"], select{
     width:100%; padding: 10px 12px; border-radius:10px; border:1px solid var(--border);
     background: var(--field-bg); color: var(--ink); font: inherit; font-size:14.5px;
   }
@@ -96,7 +96,7 @@
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b5c76' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
     background-repeat:no-repeat; background-position: right 12px center; padding-right:34px;
   }
-  input[type="text"]:focus, input[type="email"]:focus, select:focus{ outline: 2px solid var(--orchid); outline-offset:1px; }
+  input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus, select:focus{ outline: 2px solid var(--orchid); outline-offset:1px; }
   .type-hint{ font-size:12.5px; color:var(--ink-soft); margin:6px 0 0; line-height:1.5; }
 
   .photo-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
@@ -232,7 +232,10 @@
 
         <div id="rowPhone">
           <label for="fPhone" data-i18n="phone"></label>
-          <input type="text" id="fPhone" data-i18n-ph="phonePh" />
+          <div style="display:flex;gap:8px;align-items:stretch;">
+            <select id="fCountry" aria-label="Country code" style="flex:none;width:112px;"><option value="AR" data-code="+54">🇦🇷 +54</option><option value="UY" data-code="+598">🇺🇾 +598</option><option value="CL" data-code="+56">🇨🇱 +56</option><option value="BR" data-code="+55">🇧🇷 +55</option><option value="MX" data-code="+52">🇲🇽 +52</option><option value="CO" data-code="+57">🇨🇴 +57</option><option value="PE" data-code="+51">🇵🇪 +51</option><option value="PY" data-code="+595">🇵🇾 +595</option><option value="BO" data-code="+591">🇧🇴 +591</option><option value="EC" data-code="+593">🇪🇨 +593</option><option value="VE" data-code="+58">🇻🇪 +58</option><option value="PA" data-code="+507">🇵🇦 +507</option><option value="CR" data-code="+506">🇨🇷 +506</option><option value="US" data-code="+1">🇺🇸 +1</option><option value="CA" data-code="+1">🇨🇦 +1</option><option value="ES" data-code="+34">🇪🇸 +34</option><option value="PT" data-code="+351">🇵🇹 +351</option><option value="GB" data-code="+44">🇬🇧 +44</option><option value="DE" data-code="+49">🇩🇪 +49</option><option value="FR" data-code="+33">🇫🇷 +33</option><option value="IT" data-code="+39">🇮🇹 +39</option><option value="AE" data-code="+971">🇦🇪 +971</option><option value="" data-code="">—</option></select>
+            <input type="tel" inputmode="tel" autocomplete="tel-national" id="fPhone" data-i18n-ph="phonePh" style="flex:1;min-width:0;" />
+          </div>
         </div>
 
         <div id="rowLinkedin" hidden>
@@ -348,7 +351,7 @@
     fields: { linkedin: true },
     colors: {
       name:  "#F96566", // coral (color acento)
-      title: "#474756", // tipografía (cargo)
+      title: "#1F2124", // Dark Grey (cargo)
       data:  "#474756", // tipografía (email, teléfono y Linkedin)
       photoBg: "#fde3e4",
     },
@@ -370,7 +373,7 @@
     "email": "Email",
     "emailPh": "name",
     "phone": "Phone (optional)",
-    "phonePh": "e.g. +54 11 5555 5555",
+    "phonePh": "e.g. 11 5555 5555",
     "linkedin": "LinkedIn (profile URL)",
     "linkedinPh": "https://www.linkedin.com/in/your-profile",
     "photo": "Photo",
@@ -408,7 +411,7 @@
     "email": "Email",
     "emailPh": "nombre",
     "phone": "Teléfono (opcional)",
-    "phonePh": "Ej: +54 11 5555 5555",
+    "phonePh": "Ej: 11 5555 5555",
     "linkedin": "LinkedIn (URL del perfil)",
     "linkedinPh": "https://www.linkedin.com/in/tu-perfil",
     "photo": "Foto",
@@ -468,6 +471,21 @@
     return user ? `${user}@${company().domain || "tu-dominio.com"}` : "";
   }
 
+  // Cargo: mayúscula inicial en las palabras importantes (VP of Operations); respeta siglas (VP, CEO) y conectores (of, de, y...).
+  const SMALL_WORDS = new Set(['a','an','and','as','at','but','by','for','in','of','on','or','the','to','de','del','la','las','el','los','y','e','o','u','en','para','con','por','al']);
+  const ACRONYMS = new Set(['vp','svp','evp','avp','ceo','cto','cfo','coo','cmo','cio','cpo','chro','hr','it','pr','ux','ui','qa','ai','seo','b2b','b2c','csm','sdr','bdr','gm']);
+  function titleCase(str){
+    return String(str || '').trim().split(/\s+/).filter(Boolean).map((w, i) => {
+      const low = w.toLowerCase();
+      if (i > 0 && SMALL_WORDS.has(low)) return low;
+      if (ACRONYMS.has(low)) return w.toUpperCase(); // vp -> VP
+      if (w.length > 1 && w.length <= 4 && w === w.toUpperCase() && /[A-ZÁÉÍÓÚÑ]/.test(w)) return w; // siglas: CEO, COO
+      const base = (w.length > 4 && w === w.toUpperCase()) ? low : w; // VENTAS -> Ventas; DevOps queda igual
+      return base.replace(/(^|[-\/(])(\S)/g, (m, p, c) => p + c.toUpperCase());
+    }).join(' ');
+  }
+  const cleanPhone = v => String(v || '').replace(/[^0-9+\s().\-]/g, '');
+
   const state = { name:"", title:"", email:"", phone:"", linkedin:"", photo:null };
   let pendingImg = null; // Image object awaiting crop
   const MAX_STAGE = 360; // max displayed size (px) of the image inside the crop modal
@@ -490,6 +508,7 @@
     title: document.getElementById('fTitle'),
     email: document.getElementById('fEmail'),
     phone: document.getElementById('fPhone'),
+    country: document.getElementById('fCountry'),
     photoInput: document.getElementById('photoInput'),
     photoBtn: document.getElementById('photoBtn'),
     recropBtn: document.getElementById('recropBtn'),
@@ -544,7 +563,7 @@
     const FONT = "font-family:Arial,Helvetica,sans-serif;";
     const C = co.colors;
     const name = escapeHtml(data.name || t("yourName"));
-    const title = escapeHtml(data.title || t("yourTitle"));
+    const title = escapeHtml(titleCase(data.title) || t("yourTitle"));
     const emailHtml = buildEmailDisplay(data.email, co);
     const phone = escapeHtml(data.phone || "");
     const linkedin = String(data.linkedin || "").trim();
@@ -649,7 +668,18 @@
   els.name.addEventListener('input', e => { state.name = e.target.value; render(); });
   els.title.addEventListener('input', e => { state.title = e.target.value; render(); });
   els.email.addEventListener('input', e => { state.email = emailFromUser(e.target.value); render(); });
-  els.phone.addEventListener('input', e => { state.phone = e.target.value; render(); });
+  els.phone.addEventListener('input', e => { const c = cleanPhone(e.target.value); if (c !== e.target.value) e.target.value = c; state.phone = composePhone(); render(); });
+  // Teléfono: código de país (selector) + número; si el número ya empieza con "+", se respeta tal cual.
+  function composePhone(){
+    const n = cleanPhone(els.phone.value).replace(/\s+/g, ' ').trim();
+    if (!n) return '';
+    if (n.startsWith('+')) return n;
+    const code = els.country.selectedOptions[0] ? els.country.selectedOptions[0].dataset.code : '';
+    return code ? code + ' ' + n : n;
+  }
+  try { const c = localStorage.getItem('gestorCountry'); if (c !== null && [...els.country.options].some(o => o.value === c)) els.country.value = c; } catch (_) {}
+  els.country.addEventListener('change', () => { try { localStorage.setItem('gestorCountry', els.country.value); } catch (_) {} state.phone = composePhone(); render(); });
+
   els.linkedin.addEventListener('input', e => { state.linkedin = e.target.value; render(); });
   // Si alguien pega su email completo (con "@buildyourcastle.ai" incluido),
   // al salir del campo se deja solo el usuario para que no quede duplicado
@@ -782,7 +812,7 @@
       return;
     }
     const html = buildSignatureHtml(state);
-    const plain = [state.name, state.title, state.email, state.phone, (company().fields && company().fields.linkedin) ? state.linkedin : ''].filter(Boolean).join('\n');
+    const plain = [state.name, titleCase(state.title), state.email, state.phone, (company().fields && company().fields.linkedin) ? state.linkedin : ''].filter(Boolean).join('\n');
     // Método 1: API moderna del portapapeles (puede estar bloqueada dentro de
     // iframes o en algunos navegadores). Método 2: copiado clásico seleccionando
     // la vista previa y entregando el HTML de la firma en el evento "copy".
